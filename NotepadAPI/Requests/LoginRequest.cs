@@ -1,0 +1,8 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace NotepadAPI.Requests;
+
+public record LoginRequest(
+    [property: Required, EmailAddress] string Email,
+    [property: Required] string Password
+);

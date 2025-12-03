@@ -1,9 +1,15 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NotepadAPI.Data;
 using NotepadAPI.Models;
+using NotepadAPI.Requests;
+using NotepadAPI.Responses;
 using NotepadAPI.Services;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +59,67 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.MapPost("/login", async Task<Results<BadRequest<ErrorResponse>, Ok<AuthenticationResponse>>> (
+    [FromBody] LoginRequest request,
+    UserManager<ApplicationUser> userManager,
+    JwtService jwtService) =>
+{
+    var validationResults = new List<ValidationResult>();
+
+    var validationContext = new ValidationContext(request);
+
+    if (!Validator.TryValidateObject(request, validationContext, validationResults, true))
+    {
+        var errors = validationResults.ToDictionary(
+                    v => v.MemberNames.FirstOrDefault() ?? "Error",
+                    v => new string[] { v.ErrorMessage! });
+
+        return TypedResults.BadRequest(new ErrorResponse("Validation failed", errors));
+    }
+
+    var user = await userManager.FindByEmailAsync(request.Email);
+    if (user is null) return TypedResults.BadRequest(new ErrorResponse("Invalid email or password"));
+
+    var isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
+    if (!isPasswordValid) return TypedResults.BadRequest(new ErrorResponse("Invalid email or password"));
+
+    var jwtToken = jwtService.CreateToken(user);
+
+    return TypedResults.Ok(jwtToken);
+});
+
+app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok<AuthenticationResponse>>> (
+    [FromBody] RegisterRequest request,
+    UserManager<ApplicationUser> userManager,
+    JwtService jwtService
+    ) =>
+{
+    var validationResults = new List<ValidationResult>();
+
+    var validationContext = new ValidationContext(request);
+
+    if (!Validator.TryValidateObject(request, validationContext, validationResults, true))
+    {
+        var errors = validationResults.ToDictionary(
+                    v => v.MemberNames.FirstOrDefault() ?? "Error",
+                    v => new string[] { v.ErrorMessage! });
+
+        return TypedResults.BadRequest(new ErrorResponse("Validation failed", errors));
+    }
+
+    var registerResult = await userManager.CreateAsync(
+        new ApplicationUser() { Email = request.Email },
+        request.Password
+    );
+
+    if (!registerResult.Succeeded) return TypedResults.BadRequest(new ErrorResponse("Registration failed"));
+
+    var user = await userManager.FindByEmailAsync(request.Email);
+    var jwtToken = jwtService.CreateToken(user!);
+
+    return TypedResults.Ok(jwtToken);
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -63,6 +130,5 @@ app.UseStaticFiles();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-app.UseAuthorization();
 
 app.Run();
