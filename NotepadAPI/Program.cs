@@ -170,6 +170,40 @@ notes.MapPost("/", async Task<Results<UnauthorizedHttpResult, BadRequest<ErrorRe
     return TypedResults.Created($"/notes/{noteResponse.Id}", noteResponse);
 });
 
+notes.MapPut("/{id}", async Task<Results<BadRequest<ErrorResponse>, NotFound, NoContent, UnauthorizedHttpResult>> (
+    int id,
+    ClaimsPrincipal user,
+    NoteRequest request,
+    CancellationToken token,
+    ApplicationDbContext context) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return TypedResults.Unauthorized();
+
+    var validationResults = new List<ValidationResult>();
+
+    var validationContext = new ValidationContext(request);
+
+    if (!Validator.TryValidateObject(request, validationContext, validationResults, true))
+    {
+        var errors = validationResults.ToDictionary(
+                    v => v.MemberNames.FirstOrDefault() ?? "Error",
+                    v => new string[] { v.ErrorMessage! });
+
+        return TypedResults.BadRequest(new ErrorResponse("Validation failed", errors));
+    }
+
+    var noteToEdit = await context.Notes
+        .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, token);
+
+    if (noteToEdit is null) return TypedResults.NotFound();
+
+    noteToEdit.Content = request.Content;
+    await context.SaveChangesAsync(token);
+
+    return TypedResults.NoContent();
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
