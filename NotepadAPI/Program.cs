@@ -10,6 +10,7 @@ using NotepadAPI.Requests;
 using NotepadAPI.Responses;
 using NotepadAPI.Services;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +59,8 @@ builder.Services
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+var notes = app.MapGroup("/notes").RequireAuthorization();
 
 app.MapPost("/login", async Task<Results<BadRequest<ErrorResponse>, Ok<AuthenticationResponse>>> (
     [FromBody] LoginRequest request,
@@ -118,6 +121,18 @@ app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok<Authen
     var jwtToken = jwtService.CreateToken(user!);
 
     return TypedResults.Ok(jwtToken);
+});
+
+notes.MapGet("/", async Task<Results<UnauthorizedHttpResult, Ok<IEnumerable<GetNoteResponse>>>> (
+    ClaimsPrincipal user, CancellationToken token, ApplicationDbContext context) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return TypedResults.Unauthorized();
+
+    var notes = await context.Notes.Where(n => n.UserId == userId).ToListAsync(token);
+    var notesResponse = notes.Select(n => new GetNoteResponse(n.Id, n.Content));
+
+    return TypedResults.Ok(notesResponse);
 });
 
 // Configure the HTTP request pipeline.
