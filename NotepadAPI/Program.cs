@@ -64,7 +64,7 @@ var app = builder.Build();
 
 var notes = app.MapGroup("/notes").RequireAuthorization();
 
-app.MapPost("/login", async Task<Results<BadRequest<ErrorResponse>, Ok<AuthenticationResponse>>> (
+app.MapPost("/login", async Task<Results<BadRequest<ErrorResponse>, Ok<string>>> (
     [FromBody] LoginRequest request,
     UserManager<ApplicationUser> userManager,
     JwtService jwtService) =>
@@ -93,7 +93,7 @@ app.MapPost("/login", async Task<Results<BadRequest<ErrorResponse>, Ok<Authentic
     return TypedResults.Ok(jwtToken);
 });
 
-app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok<AuthenticationResponse>>> (
+app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok>> (
     [FromBody] RegisterRequest request,
     UserManager<ApplicationUser> userManager,
     JwtService jwtService
@@ -119,10 +119,7 @@ app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok<Authen
 
     if (!registerResult.Succeeded) return TypedResults.BadRequest(new ErrorResponse("Registration failed"));
 
-    var user = await userManager.FindByEmailAsync(request.Email);
-    var jwtToken = jwtService.CreateToken(user!);
-
-    return TypedResults.Ok(jwtToken);
+    return TypedResults.Ok();
 });
 
 notes.MapGet("/", async Task<Results<UnauthorizedHttpResult, Ok<IEnumerable<GetNoteResponse>>>> (
