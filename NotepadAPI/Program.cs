@@ -135,14 +135,27 @@ notes.MapGet("/", async Task<Results<UnauthorizedHttpResult, Ok<IEnumerable<GetN
     return TypedResults.Ok(notesResponse);
 });
 
-notes.MapPost("/", async Task<Results<UnauthorizedHttpResult, Created<GetNoteResponse>>> (
+notes.MapPost("/", async Task<Results<UnauthorizedHttpResult, BadRequest<ErrorResponse>, Created<GetNoteResponse>>> (
     ClaimsPrincipal user,
-    CreateNoteRequest request,
+    NoteRequest request,
     CancellationToken token,
     ApplicationDbContext context) =>
 {
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
     if (userId is null) return TypedResults.Unauthorized();
+
+    var validationResults = new List<ValidationResult>();
+
+    var validationContext = new ValidationContext(request);
+
+    if (!Validator.TryValidateObject(request, validationContext, validationResults, true))
+    {
+        var errors = validationResults.ToDictionary(
+                    v => v.MemberNames.FirstOrDefault() ?? "Error",
+                    v => new string[] { v.ErrorMessage! });
+
+        return TypedResults.BadRequest(new ErrorResponse("Validation failed", errors));
+    }
 
     var noteToAdd = new Note
     {
