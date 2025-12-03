@@ -170,7 +170,7 @@ notes.MapPost("/", async Task<Results<UnauthorizedHttpResult, BadRequest<ErrorRe
     return TypedResults.Created($"/notes/{noteResponse.Id}", noteResponse);
 });
 
-notes.MapPut("/{id}", async Task<Results<BadRequest<ErrorResponse>, NotFound, NoContent, UnauthorizedHttpResult>> (
+notes.MapPut("/{id}", async Task<Results<BadRequest<ErrorResponse>, NotFound, NoContent, UnauthorizedHttpResult, ForbidHttpResult>> (
     int id,
     ClaimsPrincipal user,
     NoteRequest request,
@@ -194,9 +194,11 @@ notes.MapPut("/{id}", async Task<Results<BadRequest<ErrorResponse>, NotFound, No
     }
 
     var noteToEdit = await context.Notes
-        .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId, token);
+        .FirstOrDefaultAsync(n => n.Id == id, token);
 
     if (noteToEdit is null) return TypedResults.NotFound();
+
+    if (noteToEdit.UserId != userId) return TypedResults.Forbid();
 
     noteToEdit.Content = request.Content;
     await context.SaveChangesAsync(token);
