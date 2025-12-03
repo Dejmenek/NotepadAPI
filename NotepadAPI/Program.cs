@@ -111,7 +111,7 @@ app.MapPost("/register", async Task<Results<BadRequest<ErrorResponse>, Ok<Authen
     }
 
     var registerResult = await userManager.CreateAsync(
-        new ApplicationUser() { Email = request.Email },
+        new ApplicationUser() { Email = request.Email, UserName = request.Email },
         request.Password
     );
 
