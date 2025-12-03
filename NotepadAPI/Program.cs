@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NotepadAPI.Data;
 using NotepadAPI.Models;
+using NotepadAPI.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,8 @@ builder.Services
         options.Password.RequireLowercase = false;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddScoped<JwtService>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
