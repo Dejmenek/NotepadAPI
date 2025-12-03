@@ -1,6 +1,5 @@
 using Microsoft.IdentityModel.Tokens;
 using NotepadAPI.Models;
-using NotepadAPI.Responses;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -16,9 +15,9 @@ public sealed class JwtService
         _configuration = configuration;
     }
 
-    public AuthenticationResponse CreateToken(ApplicationUser user)
+    public string CreateToken(ApplicationUser user)
     {
-        var expiration = DateTime.UtcNow.AddMinutes(1);
+        var expiration = DateTime.UtcNow.AddMinutes(10);
 
         var token = CreateJwtToken(
             CreateClaims(user),
@@ -28,7 +27,7 @@ public sealed class JwtService
 
         var tokenHandler = new JwtSecurityTokenHandler();
 
-        return new AuthenticationResponse(tokenHandler.WriteToken(token), expiration);
+        return tokenHandler.WriteToken(token);
     }
 
     private JwtSecurityToken CreateJwtToken(Claim[] claims, SigningCredentials credentials, DateTime expiration)
