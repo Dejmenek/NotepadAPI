@@ -3,6 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace NotepadAPI.Requests;
 
-public record CreateNoteRequest(
+public record NoteRequest(
    [property: JsonPropertyName("content"), Required] string Content
 );
