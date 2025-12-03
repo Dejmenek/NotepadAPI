@@ -135,6 +135,28 @@ notes.MapGet("/", async Task<Results<UnauthorizedHttpResult, Ok<IEnumerable<GetN
     return TypedResults.Ok(notesResponse);
 });
 
+notes.MapPost("/", async Task<Results<UnauthorizedHttpResult, Created<GetNoteResponse>>> (
+    ClaimsPrincipal user,
+    CreateNoteRequest request,
+    CancellationToken token,
+    ApplicationDbContext context) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return TypedResults.Unauthorized();
+
+    var noteToAdd = new Note
+    {
+        Content = request.Content,
+        UserId = userId
+    };
+
+    var note = context.Notes.Add(noteToAdd);
+    await context.SaveChangesAsync(token);
+
+    var noteResponse = new GetNoteResponse(note.Entity.Id, note.Entity.Content);
+    return TypedResults.Created($"/notes/{noteResponse.Id}", noteResponse);
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
