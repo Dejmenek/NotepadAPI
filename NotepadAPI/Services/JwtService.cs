@@ -45,10 +45,11 @@ public sealed class JwtService
     private Claim[] CreateClaims(ApplicationUser user)
     {
         return [
-            new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(JwtRegisteredClaimNames.Iat,
+                  DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                  ClaimValueTypes.Integer64),
             new Claim(ClaimTypes.Name, user.UserName!),
             new Claim(ClaimTypes.Email, user.Email!)
         ];
