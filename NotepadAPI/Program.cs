@@ -204,6 +204,28 @@ notes.MapPut("/{id}", async Task<Results<BadRequest<ErrorResponse>, NotFound, No
     return TypedResults.NoContent();
 });
 
+notes.MapDelete("/{id}", async Task<Results<NotFound, NoContent, UnauthorizedHttpResult, ForbidHttpResult>> (
+    int id,
+    ClaimsPrincipal user,
+    CancellationToken token,
+    ApplicationDbContext context) =>
+{
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (userId is null) return TypedResults.Unauthorized();
+
+    var noteToDelete = await context.Notes
+        .FirstOrDefaultAsync(n => n.Id == id, token);
+
+    if (noteToDelete is null) return TypedResults.NotFound();
+
+    if (noteToDelete.UserId != userId) return TypedResults.Forbid();
+
+    context.Notes.Remove(noteToDelete);
+    await context.SaveChangesAsync(token);
+
+    return TypedResults.NoContent();
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
