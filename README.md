@@ -109,3 +109,6 @@ Delete a note by ID.
 - `401 Unauthorized` – If not authenticated
 - `403 Forbidden` – If not the note owner
 - `404 Not Found` – If note does not exist
+
+### Authors
+- Damian Sempski 149720
